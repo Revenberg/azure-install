@@ -1,0 +1,105 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "virtualMachines_songs_vm_name": {
+            "defaultValue": "songs-vm",
+            "type": "String"
+        },
+      "webAppName": {
+        "type": "string",
+        "defaultValue" : "AzureLinuxApp",
+        "metadata": {
+          "description": "Base name of the resource such as web app name and app service plan "
+        },
+        "minLength": 2
+      },
+    "webSiteName": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue" : "revenberg-song",
+      "metadata": {
+        "description": "Name of the Azure Web app to create."
+      }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "S1",
+      "allowedValues": [
+        "F1",
+        "D1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "metadata": {
+        "description": "Describes plan's pricing tier and instance size. Check details at https://azure.microsoft.com/en-us/pricing/details/app-service/"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    }
+  },
+  "variables": {
+      "hostingPlanName": "[concat('AppServicePlan-', parameters('webAppName'))]"
+    },
+  "resources": [
+    {
+        "type": "Microsoft.Web/serverfarms",
+        "apiVersion": "2018-02-01",
+        "name": "[variables('hostingPlanName')]",
+        "location": "[parameters('location')]",
+        "sku": {
+          "name": "[parameters('skuName')]"
+        },
+        "kind": "linux",
+        "properties":{
+          "reserved":true
+        }
+      },
+
+    {
+      "apiVersion": "2018-02-01",
+      "name": "[parameters('webSiteName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[parameters('location')]",
+      "tags": {
+        "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', variables('hostingPlanName'))]": "Resource",
+        "displayName": "Website"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]"
+      ],
+      "properties": {
+        "name": "[parameters('webSiteName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2018-02-01",
+          "name": "web",
+          "type": "config",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', parameters('webSiteName'))]"
+          ],
+          "properties": {
+            "javaVersion": "1.8",
+            "javaContainer": "TOMCAT",
+            "javaContainerVersion": "9.0"
+          }
+        }        
+      ]
+    }
+  ]
+}
